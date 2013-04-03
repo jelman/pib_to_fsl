@@ -8,7 +8,7 @@ function [flirtmat spmvoxmat fslvoxmat] = worldmat2flirtmat(worldmat, src, trg)
 
 % Copyright 2009 Ged Ridgway <ged.ridgway gmail.com>
 
-% Edited by Jeremy 4/2/13 to allow specification of filename
+% Edited by Jeremy 4/2/13 to allow worlmat input to be filename.
 if ischar(worldmat) 
     worldmat = open(worldmat);
     worldmat=worldmat.M;
