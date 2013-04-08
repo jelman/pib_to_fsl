@@ -1,4 +1,4 @@
-function [flirtmat spmvoxmat fslvoxmat] = worldmat2flirtmat(worldmat, src, trg)
+function [flirtmat spmvoxmat fslvoxmat] = worldmat2flirtmat(worldmat, src, trg, output_file)
 %worldmat2flirtmat: convert NIfTI world (mm) coordinates matrix to flirt
 %
 % Example:
@@ -27,6 +27,10 @@ fslvoxmat = inv(addone) * spmvoxmat * addone;
 trgscl = nifti2scl(trg);
 srcscl = nifti2scl(src);
 flirtmat = inv( srcscl * fslvoxmat * inv(trgscl) );
+
+%Write out flirtmat for use with nipype wrapper
+%Added by Jeremy 4/5/13. 
+flirtmat_write(output_file, flirtmat); 
 
 %%
 function scl = nifti2scl(N)
