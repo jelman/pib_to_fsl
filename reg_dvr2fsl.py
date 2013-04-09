@@ -3,8 +3,37 @@ from glob import glob
 import scipy.io as sio
 import numpy as np
 import nibabel as nib
-import nipype
+import nipype.interfaces.fsl as fsl
+from nipype.interfaces.base import CommandLine
+import worldmat2flirtmap_pywrapper as w2f
 
+
+def find_single_file(searchstring):
+    """ glob for single file using searchstring
+    if found returns full file path """
+    file = glob(searchstring)
+    if len(file) < 1:
+        print '%s not found' % searchstring
+        return None
+    else:
+        outfile = file[0]
+        return outfile
+
+def unzip_file(infile):
+    """ looks for gz  at end of file,
+    unzips and returns unzipped filename"""
+    base, ext = os.path.splitext(infile)
+    if not ext == '.gz':
+        return infile
+    else:
+        cmd = CommandLine('gunzip %s' % infile)
+        cout = cmd.run()
+        if not cout.runtime.returncode == 0:
+            print 'Failed to unzip %s'%(infile)
+            return None
+        else:
+            return base
+       
 def get_subid(instr):
     """ pulls the subid Bxx-xxx out of a string
     returns text matching pattern"""
@@ -14,74 +43,46 @@ def get_subid(instr):
     except:
         return None
 
-def nifti2scl(img):
-    imgmat = img.get_affine() # get image affine
-    # not sure if this is always correct with rotations in mat, but seems okay! - Ged
-    imgmat_sumsq = np.sum(imgmat[0:3,0:3]**2, axis=0)
-    imgmat_rtsumsq = np.sqrt(imgmat_sumsq)
-    scl = np.diag(np.append(imgmat_rtsumsq,1))
-    if np.linalg.det(imgmat) > 0:
-        # neurological, x-axis is flipped, such that [3 2 1 0] and [0 1 2 3]
-        # have the same *scaled* coordinates - Ged
-        xflip = np.diag((-1, 1, 1, 1))
-        xflip[0,3] = img.shape[0] - 1 # reflect about centre
-        scl = np.dot(scl, xflip)
-    return scl
-    
-def worldmat2flirtmat(worldmat, src, trg):
-    srcimg = nib.load(src)
-    trgimg = nib.load(trg)
-    worldmat_contents = sio.loadmat(worldmat)  
-    # get affine of files
-    worldmat_M = worldmat_contents['M'] 
-    srcmat = srcimg.get_affine()
-    trgmat = trgimg.get_affine()
-    
-    # get voxel matrices, voxels are one-based in Matlab and zero-based in FSL
-    spmvoxmat = np.dot(np.linalg.inv(srcmat), np.dot(worldmat_M,trgmat))
-    spmvoxmat = np.around(spmvoxmat, decimals=4)
-    addone = np.identity(4)
-    addone[:,3] = 1
-    fslvoxmat = np.dot(np.linalg.inv(addone), np.dot(spmvoxmat,addone))
-    fslvoxmat = np.around(fslvoxmat,decimals=4)
 
-    # get flirt scaled elements
-    trgscl = nifti2scl(trgimg)
-    trgscl = np.around(trgscl, decimals=4)
-    srcscl = nifti2scl(srcimg)
-    srcscl = np.around(srcscl, decimals=4)
-    inv_trgscl = np.linalg.inv(trgscl)
-    flirtmat = np.linalg.inv(np.dot(srcscl, np.dot(fslvoxmat, inv_trgscl)))
-    flirtmat = np.around(flirtmat, decimals=4)
-    
-    return flirtmat, spmvoxmat, fslvoxmat
-    
-    
     
 if __name__ == '__main__':
 
+    ######################################################################
+    ################# Specify path and file names ########################
     ### Specify path names
     basedir = '/home/jagust/rsfmri_ica/data' # main project directory
     pibdir = 'pib' # name of directory containing pib data
     anatdir = 'anat' # name of directory containing FSL structural data
+    funcdir = 'func' # name of directory containing FSL functional data
     
-    ### Specify filenames used in pib processing
-    mri_pibproc = 'brainmask.nii' # name of mri file used in pib processing
-    pib_fname_pattern = 'mean20min*.nii*' # filename pattern of pib image
-    coreg_mat = 'mri_to_pet.mat' # mat file used to coreg mri->pet
-    anat_fname = 'anat_brain.nii.gz' # file name of structural image
-                                     #   used in FSL processing
+    ### Inputs ###
+    # Specify filenames and filename patterns from pib processing
+    matbrain_fname = 'brainmask.nii*' # name of mri file used in pib processing
+    pib_fname_pattern = 'DVR*.nii*' # filename pattern of pib image
+    mat_coregname = 'mri_to_pet.mat' # mat file used to coreg mri->pet
+    # Specify filenames of files used in FSL processing stream
+    flirtbrain_fname = 'anat_brain.nii.gz' # structural image from FSL processing
+    flirtwarp_fname = os.path.join('*_4d_OldICA_IC0_ecat_2mm_6fwhm_125.ica',
+                                'reg',
+                                'highres2standard_warp.nii.gz') # filename pattern of
+                                                                # flirtbrain -> std warp
+    stdbrain = os.path.join(os.getenv('FSLDIR'),
+                            'data/standard',
+                            'MNI152_T1_2mm_brain.nii.gz') # Standard brain used
+                            
+    ### Outputs ###                            
+    # Specify names of FSL readable matfiles
+    flirt_coregname = 'mri_to_pet_flirt.mat' # name for FSL readable copy of mri->pet coreg
+    invflirt_coregname = 'pet_to_mri_flirt.mat' # name for pet-> mat coreg
+    concat_coregname = 'pet_to_anat_flirt.mat' # name for pet->flirtbrain coreg
+    # Specify name of pib file registered to standard space
+    stdpib_fname = 'DVR2std.nii.gz' 
+    ###########################################################################
+    ###########################################################################
     
-    ### Specify filenames of flirt-style mat files
-    flirtmatout = 'mri_to_pet_flirt.mat' # FSL readable copy of coreg_mat
-    invflirtmatout = 'pet_to_mri_flirt.mat' # FSL readable copy of inverted coreg_mat
-
-    ### Specify list of subject codes on command line, otherwise searches basedir for data
-    if len(sys.argv) ==2:   #If specified, load file as list of subject id's
-        args = sys.argv[1]
-        print 'Using subjects specified in ', args
-        with open(args, 'r') as f:
-            sublist = f.read().splitlines()
+    # Specify list of subject codes on command line, otherwise searches basedir for data
+    if len(sys.argv) > 2:   #If specified, load file as list of subject id's
+        sublist = sys.argv[1:]
     else:    #If no file name given, search for data
         print 'No subjects specified, searching for data in ', basedir
         # look for subjects already registered filtered func ica data
@@ -96,42 +97,78 @@ if __name__ == '__main__':
             if subid is None:
                 print subdir, 'does not have a valid subid'
                 continue
-                
-    ### Loop over all subjects.
+    
+    ### Begin looping over all subject
+    ##################################
     for subj in sublist:
         
-        ## Specify subject specific subdirectories
+        # Sets subject specific subdirectories
         subjpibdir = os.path.join(basedir, subj, pibdir)
         subjanatdir = os.path.join(basedir, subj, anatdir)
+        subjfuncdir = os.path.join(basedir, subj, funcdir)
         
-        ## Specify inputs to worldmat2flirt.m
-        brainmask = os.path.join(subjpibdir, 
-                            mri_pibproc) #mri used in pib processing
-        pibglob = os.path.join(subjpibdir, 
-                            pib_fname_pattern) # filename pattern of pib
-        pibfile = glob(pibglob)[0] #raw pib image in subject space
-        matfile = os.path.join(subjpibdir, 
-                            coreg_mat) #matfile from mri->pet coreg 
+        # Sets inputs to worldmat2flirt.m
+        globstr = os.path.join(subjpibdir, matbrain_fname)
+        matbrain =  find_single_file(globstr) 
+        matbrain = unzip_file(matbrain) #mri used in pib processing
+        globstr = os.path.join(subjpibdir, pib_fname_pattern) 
+        pibfile = find_single_file(globstr) 
+        pibfile = unzip_file(pibfile) #raw pib image in subject space
+        globstr = os.path.join(subjpibdir, 
+                            mat_coregname)
+        mat_coreg = find_single_file(globstr) #matfile from mri->pet coreg 
+        flirt_coreg = os.path.join(subjpibdir, flirt_coregname)
+        
         ###Convert mri->pet matfile from matlab to flirt format
-        flirtmat, spmvoxmat, fslvoxmat = worldmat2flirtmat(matfile, brainmask, pibfile)
-        invflirtmat = np.linalg.inv(flirtmat) #get inverted transform
-        # Save out flirtmat and invflirtmat
-        np.savetxt(flirtmatout, flirtmat,fmt='%10.4f')
-        np.savetxt(invflirtmatout, invflirtmat,fmt='%10.4f')
+        #Outputs firtmat specified above
+        mattoflirt = w2f.worldmat2flirtmap()
+        mattoflirt.inputs.src = matbrain
+        mattoflirt.inputs.trg = pibfile
+        mattoflirt.inputs.worldmat = mat_coreg
+        mattoflirt.inputs.output_file = flirt_coreg
+        mlabrun = mattoflirt.run()
+        
+        # Get inverted transform using convert_xfm to map pet-> mri
+        invflirt_coreg = os.path.join(subjpibdir, invflirt_coregname)
+        
+        invt = fsl.ConvertXFM()
+        invt.inputs.in_file = flirt_coreg
+        invt.inputs.invert_xfm = True
+        invt.inputs.out_file = invflirt_coreg
+        invt.run()
         
         # Register brainmask to structural used in FSL processing stream
-        anat_brain = os.path.join(subjanatdir, anat_fname)
+        sub_flirtbrain_fname = '_'.join([subj, flirtbrain_fname]) # set subj specific filename
+        flirtbrain = os.path.join(subjanatdir, sub_flirtbrain_fname)
+        matbrain_to_flirtbrain = os.path.join(subjpibdir, 'brainmask_to_anat.mat')
+
+        flt = fsl.FLIRT(bins=256, cost_func='normcorr')
+        flt.inputs.in_file = matbrain
+        flt.inputs.reference = flirtbrain
+        flt.inputs.out_matrix_file = matbrain_to_flirtbrain
+        flt.inputs.dof = 6
+        flt.run() 
         
+        # Concatenate pib->brainmask with brainmask->anat
+        concat_coreg = os.path.join(subjpibdir, concat_coregname)
         
-        """
-        TO DO:
-        X save out flirtmat (mri -> pet)
-        X invert flirtmat to get pet -> mri)
-        - test to verify it maps between mri and pet
+        concat = fsl.ConvertXFM()
+        concat.inputs.in_file = invflirt_coreg
+        concat.inputs.in_file2 = matbrain_to_flirtbrain
+        concat.inputs.concat_xfm = True
+        concat.inputs.out_file = concat_coreg
+        concat.run()
         
-        - flirt brainmask->flirt_brain
-        - concat pet->mri &  brainmask->anat_brain
-        - apply anat_brain2std warp to pib image,
-        use concat mat as initial linear transform
-        - adapt feat_gm_prepare to create 4D voxelwise pib covariate
+        # Apply existing 
+        flirtwarp = find_single_file(os.path.join(subjfuncdir,flirtwarp_fname))
+        stdpib = os.path.join(subjpibdir, stdpib_fname)
+        
+        aw = fsl.ApplyWarp()
+        aw.inputs.in_file = pibfile
+        aw.inputs.ref_file = stdbrain
+        aw.inputs.field_file = flirtwarp
+        aw.inputs.premat = concat_coreg 
+        aw.inputs.out_file = stdpib
+        aw.run()
+
         
