@@ -81,7 +81,7 @@ if __name__ == '__main__':
     ###########################################################################
     
     # Specify list of subject codes on command line, otherwise searches basedir for data
-    if len(sys.argv) > 2:   #If specified, load file as list of subject id's
+    if len(sys.argv) > 1:   #If specified, load file as list of subject id's
         sublist = sys.argv[1:]
     else:    #If no file name given, search for data
         print 'No subjects specified, searching for data in ', basedir
