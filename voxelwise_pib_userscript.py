@@ -3,6 +3,7 @@ sys.path.insert(0, '/home/jagust/jelman/CODE/pib_to_fsl')
 import coreg_pib2fsl as coregpib
 import feat_pib_prepare as pibprep
 from nipype.utils.filemanip import split_filename
+import json
 
 def save_json(filename, data):
     """Save data to a json file
@@ -58,7 +59,7 @@ if __name__ == '__main__':
     # Specify name of pib file registered to standard space
     stdpib_fname = 'DVR2std.nii.gz' 
     pib4d_fname = os.path.join(basedir,
-                        'OldICA_IC0_ecat_2mm_6fwhm_125.gica'
+                        'OldICA_IC0_ecat_2mm_6fwhm_125.gica',
                         '4D_pib_dvr.nii.gz')
     ###########################################################################
     ###########################################################################
@@ -123,14 +124,17 @@ if __name__ == '__main__':
         
         
     # Create summary of pet->std registration for review
-    pibfilelist = ' '.join(warpedpib.values())
-    coregpib.regsummary(stdbrain, pibfilelist)
+    pibfilelist = []
+    for key in sorted(warpedpib):
+        pibfilelist.append(warpedpib[key])
+    pibfiles = ' '.join(pibfilelist)
+    coregpib.regsummary(stdbrain, pibfiles)
     
     # Concatenate into 4D file and demean for use as covariate
-    pib4dfile = pibprep.concat_demean(pib4d_fname, pibfilelist)
+    pib4dfile = pibprep.concat_demean(pib4d_fname, pibfiles)
     
     # Save out dict listing subject order and files in 4D file
-    fname_base = pib4dfile.split('.')[0]
+    fname_base = pib4d_fname.split('.')[0]
     fname = ''.join([fname_base, '_subjorder.txt'])
     save_json(fname, warpedpib)
         

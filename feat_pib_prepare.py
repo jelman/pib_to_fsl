@@ -99,7 +99,7 @@ def concat_demean(outfile, filelist):
         print demeanout.runtime.stderr, demeanout.runtime.stdout
         return None
     else:
-        print '4D file ready. Remember to verify subject order!'
+        print '4D file saved to %s. Remember to verify subject order!'%(outfile)
         print 'You may want to add additional smoothing to 4D file in order'
         print 'to ameliorate possible effects of mis-registrations between' 
         print 'functional and structural data, and to lessen the effect of'
