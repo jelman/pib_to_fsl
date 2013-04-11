@@ -1,47 +1,114 @@
 import os
 import sys
 from nipype.interfaces.base import CommandLine
+from nipype.utils.filemanip import fname_presuffix
+from glob import glob
 
+
+def find_single_file(searchstring):
+    """ glob for single file using searchstring
+    if found returns full file path """
+    file = glob(searchstring)
+    if len(file) < 1:
+        print '%s not found' % searchstring
+        return None
+    else:
+        outfile = file[0]
+        return outfile
+        
+        
 def getsmooth(designfsf):
     with open(designfsf, 'r') as searchfile:
         for line in searchfile:
-            if 'fmri(smooth)' in line:
-                smooth =  line.split()[-1]
-                return smooth
+            try:
+                if 'fmri(smooth)' in line:
+                    smooth =  line.split()[-1]
+                    return smooth
+            except:
+                print 'Could not find fwhm of smoothing applied to func data'
+                print 'Make sure design.fsf is located in feat dir'
 
-if __name__ == '__main__':
-    
-    if len(sys.argv) <= 2:
-        print 'Usage: python feat_pib_prepare.py <4D-PIB-output> <list of subject codes>'
-        print 'Note: these all have to have had registration completed on them'
-        sys.exit()
+def get_resolution(img):
+    cmd = ' '.join(['fslval', 
+                    img, 
+                    'pixdim1'])
+    cout = CommandLine(cmd).run()
+    if not cout.runtime.returncode == 0:
+        print cmd
+        print cout.runtime.stderr, cout.runtime.stdout
+        return None
     else:
-        args = sys.argv[1:]
+        res = cout.runtime.stdout
+        return res
+
+def est_smoothing(featdir, trgimage):   
+    print 'Estimating smoothness...' 
+    designfsf = os.path.join(featdir, 'design.fsf')
+    func_smoothing = getsmooth(designfsf) # Get fwhm smoothing of func data
+    subjstdimg = os.path.join(featdir,'reg', 
+                                'standard.nii.gz') # Standard space img
+    stdspaceres = get_resolution(subjstdimg)
+    example_func = os.path.join(featdir, 'example_func')
+    cmd  = ' '.join(['match_smoothing', 
+                    example_func, 
+                    func_smoothing, 
+                    trgimage, 
+                    stdspaceres])
+    cout = CommandLine(cmd).run()
+    if not cout.runtime.returncode == 0:
+        print cmd
+        print cout.runtime.stderr, cout.runtime.stdout
+    else:
+        smoothing = cout.runtime.stdout
+        print 'Subject-space images will be smoothed by sigma=%smm'%(smoothing)
+        print 'to match the standard-space functional data'
+        return smoothing
         
-    pib4d = args[0]
-    sublist = args[1:]
+def apply_smooth(img, smoothing):
+    outfname = fname_presuffix(img, prefix=u's')
+    cmd = ' '.join(['fslmaths', 
+                    img, 
+                    '-s %s'%(smoothing), 
+                    outfname])
+    cout = CommandLine(cmd).run()
+    if not cout.runtime.returncode == 0:
+        print cmd
+        print cout.runtime.stderr, cout.runtime.stdout
+    else:
+        globstr = ''.join([outfname,'*'])
+        outfile = find_single_file(globstr)
+        return outfile
+
+def concat_demean(outfile, filelist):
+    concatcmd = ' '.join(['fslmerge -t', 
+                            outfile, 
+                            filelist])
+    concatout = CommandLine(concatcmd).run()
+    if not concatout.runtime.returncode == 0:
+        print concatcmd
+        print concatout.runtime.stderr, concatout.runtime.stdout
+        return None
+        
+    demeancmd = ' '.join(['fslmaths', 
+                            outfile, 
+                            '-Tmean -mul -1 -add %s'%(outfile), 
+                            outfile])
+    demeanout = CommandLine(demeancmd).run()
+    if not demeanout.runtime.returncode == 0:
+        print demeancmd
+        print demeanout.runtime.stderr, demeanout.runtime.stdout
+        return None
+    else:
+        print '4D file ready. Remember to verify subject order!'
+        print 'You may want to add additional smoothing to 4D file in order'
+        print 'to ameliorate possible effects of mis-registrations between' 
+        print 'functional and structural data, and to lessen the effect of'
+        print 'the additional confound regressors'
+        return outfile
     
-    ######################################################################
-    ################# Specify path and file names ########################
-    ### Specify path names
-    basedir = '/home/jagust/rsfmri_ica/data' # main project directory
-    pibdir = 'pib' # name of directory containing pib data
-    featdir = '_4d_OldICA_IC0_ecat_2mm_6fwhm_125.ica' # name of feat directory
-    
-    for subj in sublist:
-        print 'Starting on subject %s'%(subj)
+
+
+
         
-        #Subject specific paths
-        subjpibdir = os.path.join(basedir, subj, pibdir)
-        subjfuncdir = os.path.join(basedir, funcdir)
-        subjfeatdir = os.path.join(basedir, subj, 
-                                    'func', 
-                                    ''.join([subj, featdir]))
-                                    
-        # estimate how much we will need to smooth the pib data by, in the end
-        print 'Estimating smoothness...'
-        designfsf = os.path.join(subjfeatdir, 'design.fsf')
-        func_smoothing = getsmooth(designfsf)
-        
-        
+
     
