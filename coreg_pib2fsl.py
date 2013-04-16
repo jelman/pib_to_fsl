@@ -113,6 +113,8 @@ def applywarp(infile, ref, warp, premat, outfile):
         return cout.outputs   
                 
 def regsummary(overlay, imglist):
+    if type(imglist)==list:
+        imglist = ' '.join(imglist)
     cmd = ' '.join(['slicesdir',
                     '-p %s'%(overlay),
                     imglist])

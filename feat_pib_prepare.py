@@ -80,6 +80,8 @@ def apply_smooth(img, smoothing):
         return outfile
 
 def concat_demean(outfile, filelist):
+    if type(filelist)==list:
+        filelist = ' '.join(filelist)
     concatcmd = ' '.join(['fslmerge -t', 
                             outfile, 
                             filelist])

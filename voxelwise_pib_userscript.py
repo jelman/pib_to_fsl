@@ -3,22 +3,10 @@ sys.path.insert(0, '/home/jagust/jelman/CODE/pib_to_fsl')
 import coreg_pib2fsl as coregpib
 import feat_pib_prepare as pibprep
 from nipype.utils.filemanip import split_filename
-import json
+from nipype.utils.filemanip import save_json
 
-def save_json(filename, data):
-    """Save data to a json file
-    
-    Parameters
-    ----------
-    filename : str
-        Filename to save data in.
-    data : dict
-        Dictionary to save in json file.
 
-    """
-    fp = file(filename, 'w')
-    json.dump(data, fp, sort_keys=True, indent=4)
-    fp.close()
+
         
 if __name__ == '__main__':
 
@@ -127,15 +115,15 @@ if __name__ == '__main__':
     pibfilelist = []
     for key in sorted(warpedpib):
         pibfilelist.append(warpedpib[key])
-    pibfiles = ' '.join(pibfilelist)
-    coregpib.regsummary(stdbrain, pibfiles)
+    coregpib.regsummary(stdbrain, pibfilelist)
     
     # Concatenate into 4D file and demean for use as covariate
-    pib4dfile = pibprep.concat_demean(pib4d_fname, pibfiles)
+    pib4dfile = pibprep.concat_demean(pib4d_fname, pibfilelist)
     
     # Save out dict listing subject order and files in 4D file
-    fname_base = pib4d_fname.split('.')[0]
-    fname = ''.join([fname_base, '_subjorder.txt'])
-    save_json(fname, warpedpib)
+    pth, fname_base, ext = split_filename(pib4d_fname)
+    fname = ''.join([os.path.join(pth,fname_base), '_subjorder.txt'])
+    with open(fname, 'w+') as f:
+        f.write('\n'.join(pibfilelist))
         
     os.chdir(startdir)
