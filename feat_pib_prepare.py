@@ -28,6 +28,7 @@ def getsmooth(designfsf):
                 print 'Could not find fwhm of smoothing applied to func data'
                 print 'Make sure design.fsf is located in feat dir'
 
+
 def get_resolution(img):
     cmd = ' '.join(['fslval', 
                     img, 
@@ -40,6 +41,7 @@ def get_resolution(img):
     else:
         res = cout.runtime.stdout
         return res
+
 
 def est_smoothing(featdir, trgimage):   
     print 'Estimating smoothness...' 
@@ -63,6 +65,7 @@ def est_smoothing(featdir, trgimage):
         print 'Subject-space images will be smoothed by sigma=%smm'%(smoothing)
         print 'to match the standard-space functional data'
         return smoothing
+
         
 def apply_smooth(img, smoothing):
     outfname = fname_presuffix(img, prefix=u's')
@@ -78,8 +81,56 @@ def apply_smooth(img, smoothing):
         globstr = ''.join([outfname,'*'])
         outfile = find_single_file(globstr)
         return outfile
+        
+        
+def flirt_coreg(infile, ref, outmat, cost='corratio'):     
+    flt = fsl.FLIRT(bins=256, cost_func=cost)
+    flt.inputs.in_file = infile
+    flt.inputs.reference = ref
+    flt.inputs.out_matrix_file = outmat
+    flt.inputs.dof = 6
+    cout = flt.run() 
+    if not cout.runtime.returncode == 0:
+        print invt.cmdline
+        print cout.runtime.stderr, cout.runtime.stdout
+        return None
+    else:
+        return cout.outputs
 
-def concat_demean(outfile, filelist):
+        
+def applywarp(infile, ref, warp, premat, outfile):
+    aw = fsl.ApplyWarp()
+    aw.inputs.in_file = infile
+    aw.inputs.ref_file = ref
+    aw.inputs.field_file = warp
+    aw.inputs.premat = premat
+    aw.inputs.out_file = outfile
+    cout = aw.run()   
+    if not cout.runtime.returncode == 0:
+        print invt.cmdline
+        print cout.runtime.stderr, 
+        return None
+    else:
+        return cout.outputs   
+ 
+                
+def regsummary(overlay, imglist):
+    if type(imglist)==list:
+        imglist = ' '.join(imglist)
+    cmd = ' '.join(['slicesdir',
+                    '-p %s'%(overlay),
+                    imglist])
+    cout = CommandLine(cmd).run()
+    if not cout.runtime.returncode == 0:
+        print cout.cmdline
+        print cout.runtime.stderr, cout.runtime.stdout
+        return None  
+    else:
+        print 'To view registration summary, point browser at:'
+        print cout.runtime.stdout.split('\n')[-2:]
+        
+
+def concat4d(outfile, filelist):
     if type(filelist)==list:
         filelist = ' '.join(filelist)
     concatcmd = ' '.join(['fslmerge -t', 
@@ -90,10 +141,14 @@ def concat_demean(outfile, filelist):
         print concatcmd
         print concatout.runtime.stderr, concatout.runtime.stdout
         return None
-        
+    else:
+        return outfile
+
+
+def demean4d(infile, outfile):       
     demeancmd = ' '.join(['fslmaths', 
-                            outfile, 
-                            '-Tmean -mul -1 -add %s'%(outfile), 
+                            infile, 
+                            '-Tmean -mul -1 -add %s'%(infile), 
                             outfile])
     demeanout = CommandLine(demeancmd).run()
     if not demeanout.runtime.returncode == 0:
