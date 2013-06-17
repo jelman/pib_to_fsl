@@ -1,6 +1,5 @@
 import sys, os
 sys.path.insert(0, '/home/jagust/jelman/CODE/pib_to_fsl')
-import coreg_pib2fsl as coregpib
 import feat_pib_prepare as pibprep
 from nipype.utils.filemanip import split_filename
 from nipype.utils.filemanip import save_json
@@ -72,7 +71,7 @@ if __name__ == '__main__':
         
         # Coregister dvr->highres and save out matfile
         subjoutmat = os.path.join(subjpibdir, dvr2highres_mat)
-        dvr2highres_coreg = coregpib.flirt_coreg(smoothedpib, 
+        dvr2highres_coreg = pibprep.flirt_coreg(smoothedpib, 
                                         subjhighres, 
                                         subjoutmat)
         dvr2highres_outmat = dvr2highres_coreg.out_matrix_file
@@ -81,7 +80,7 @@ if __name__ == '__main__':
                                 'reg',
                                 highres2std_fname)
         stdpib = os.path.join(subjpibdir, dvr2std_fname)
-        warp_pib2std = coregpib.applywarp(subjdvr, 
+        warp_pib2std = pibprep.applywarp(subjdvr, 
                                             stdbrain, 
                                             highres2std_warp, 
                                             dvr2highres_outmat, 
@@ -95,11 +94,11 @@ if __name__ == '__main__':
     dvrlist = []
     for key in sorted(warpedpib):
         dvrlist.append(warpedpib[key])
-    coregpib.regsummary(stdbrain, dvrlist)
+    pibprep.regsummary(stdbrain, dvrlist)
     
     # Concatenate into 4D file and demean for use as covariate
-    pib4dfile = pibprep.concat_demean(pib4d_fname, dvrlist)
-    
+    pib4dfile = pibprep.concat4d(pib4d_fname, dvrlist)
+    pib4dfile_demeaned = pibprep.demean4d(pib4dfile, pib4dfile)
     # Save out dict listing subject order and files in 4D file
     pth, fname_base, ext = split_filename(pib4d_fname)
     fname = ''.join([os.path.join(pth,fname_base), '_subjorder.txt'])
