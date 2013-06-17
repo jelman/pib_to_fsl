@@ -69,8 +69,8 @@ def invert_coreg(mat, invmat):
     else:
         return cout.outputs
 
-def flirt_coreg(infile, ref, outmat):     
-    flt = fsl.FLIRT(bins=256, cost_func='normcorr')
+def flirt_coreg(infile, ref, outmat, cost='corratio'):     
+    flt = fsl.FLIRT(bins=256, cost_func=cost)
     flt.inputs.in_file = infile
     flt.inputs.reference = ref
     flt.inputs.out_matrix_file = outmat
@@ -153,7 +153,7 @@ if __name__ == '__main__':
     mat_coregname = 'mri_to_pet.mat' # mat file used to coreg mri->pet
     # Filenames of files used in FSL processing stream
     flirtbrain_fname = 'anat_brain.nii.gz' # structural image from FSL processing
-    flirtwarp_fname = os.path.join('*_4d_OldICA_IC0_ecat_2mm_6fwhm_125.ica',
+    flirtwarp_fname = os.path.join('*_4d_GroupICA.ica',
                                 'reg',
                                 'highres2standard_warp.nii.gz') # filename pattern of
                                                                 # flirtbrain -> std warp
