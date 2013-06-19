@@ -2,6 +2,7 @@ import os
 import sys
 from nipype.interfaces.base import CommandLine
 from nipype.utils.filemanip import fname_presuffix
+from nipype.interfaces import fsl
 from glob import glob
 
 
@@ -83,10 +84,11 @@ def apply_smooth(img, smoothing):
         return outfile
         
         
-def flirt_coreg(infile, ref, outmat, cost='corratio'):     
+def flirt_coreg(infile, ref, outmat, outfile, cost='corratio'):     
     flt = fsl.FLIRT(bins=256, cost_func=cost)
     flt.inputs.in_file = infile
     flt.inputs.reference = ref
+    flt.inputs.out_file = outfile
     flt.inputs.out_matrix_file = outmat
     flt.inputs.dof = 6
     cout = flt.run() 

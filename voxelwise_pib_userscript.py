@@ -37,6 +37,7 @@ if __name__ == '__main__':
                             
     ### Outputs ###                            
     dvr2highres_mat = 'dvr2highres.mat' # name for pet-> highres coreg mat
+    dvr2highres_fname = 'dvr2highres.nii.gz'
     dvr2std_fname = 'dvr2std.nii.gz'    #dvr image in standard space
     pib4d_fname = os.path.join(
                         basedir,        #name of demeaned 4d voxelwise covariate file
@@ -71,9 +72,11 @@ if __name__ == '__main__':
         
         # Coregister dvr->highres and save out matfile
         subjoutmat = os.path.join(subjpibdir, dvr2highres_mat)
+        subjoutfile = os.path.join(subjpibdir, dvr2highres_fname)
         dvr2highres_coreg = pibprep.flirt_coreg(smoothedpib, 
                                         subjhighres, 
-                                        subjoutmat)
+                                        subjoutmat,
+                                        subjoutfile)
         dvr2highres_outmat = dvr2highres_coreg.out_matrix_file
         # Warp pib->std. Uses existing structural->std warp and pib->structural premat
         highres2std_warp = os.path.join(subjfeatdir,
