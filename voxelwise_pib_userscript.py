@@ -23,7 +23,7 @@ if __name__ == '__main__':
     pibdir = 'pib' # name of directory containing pib data
     anatdir = 'anat' # name of directory containing FSL structural data
     funcdir = 'func' # name of directory containing FSL functional data
-    featdir = '_4d_GroupICA.ica'
+    featdir = '_4d_OldYoungICA.ica'
     
     ### Inputs ###
     # Specify filenames and filename patterns from pib processing
@@ -31,17 +31,19 @@ if __name__ == '__main__':
     # Specify filenames of files used in FSL processing stream
     highres_suffix = '_anat_brain.nii.gz' # structural image from FSL processing
     highres2std_fname = 'highres2standard_warp.nii.gz'
-    stdbrain = os.path.join(os.getenv('FSLDIR'),
-                            'data/standard',
-                            'MNI152_T1_2mm_brain.nii.gz') # Standard brain used
+    refbrain = os.path.join('/home/jagust/jelman/templates/MNI/data/standard',
+                            'MNI152_T1_3mm_brain.nii.gz') # Standard brain used
                             
     ### Outputs ###                            
     dvr2highres_mat = 'dvr2highres.mat' # name for pet-> highres coreg mat
     dvr2highres_fname = 'dvr2highres.nii.gz'
     dvr2std_fname = 'dvr2std.nii.gz'    #dvr image in standard space
     pib4d_fname = os.path.join(
-                        basedir,        #name of demeaned 4d voxelwise covariate file
+                        basedir,        #name of 4d voxelwise covariate file
                         '4D_pib_dvr.nii.gz')
+    pib4d_demean_fname = os.path.join(
+                        basedir,        #name of demeaned 4d voxelwise covariate file
+                        '4D_pib_dvr_demeaned.nii.gz')
     ###########################################################################
     ###########################################################################
     
@@ -67,7 +69,7 @@ if __name__ == '__main__':
                                     ''.join([subj, highres_suffix]))
         
         # Estimate and apply smoothing to PIB images
-        smoothing = pibprep.est_smoothing(subjfeatdir, subjdvr)
+        smoothing = pibprep.est_smoothing(subjfeatdir, subjdvr, 3)
         smoothedpib = pibprep.apply_smooth(subjdvr, smoothing)
         
         # Coregister dvr->highres and save out matfile
@@ -84,7 +86,7 @@ if __name__ == '__main__':
                                 highres2std_fname)
         stdpib = os.path.join(subjpibdir, dvr2std_fname)
         warp_pib2std = pibprep.applywarp(subjdvr, 
-                                            stdbrain, 
+                                            refbrain, 
                                             highres2std_warp, 
                                             dvr2highres_outmat, 
                                             stdpib)
@@ -97,11 +99,11 @@ if __name__ == '__main__':
     dvrlist = []
     for key in sorted(warpedpib):
         dvrlist.append(warpedpib[key])
-    pibprep.regsummary(stdbrain, dvrlist)
+    pibprep.regsummary(refbrain, dvrlist)
     
     # Concatenate into 4D file and demean for use as covariate
     pib4dfile = pibprep.concat4d(pib4d_fname, dvrlist)
-    pib4dfile_demeaned = pibprep.demean4d(pib4dfile, pib4dfile)
+    pib4dfile_demeaned = pibprep.demean4d(pib4dfile, pib4d_demeaned_fname)
     # Save out dict listing subject order and files in 4D file
     pth, fname_base, ext = split_filename(pib4d_fname)
     fname = ''.join([os.path.join(pth,fname_base), '_subjorder.txt'])
