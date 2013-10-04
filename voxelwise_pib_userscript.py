@@ -73,6 +73,7 @@ if __name__ == '__main__':
         smoothedpib = pibprep.apply_smooth(subjdvr, smoothing)
         
         # Coregister dvr->highres and save out matfile
+        print 'Running coregistrations...'
         subjoutmat = os.path.join(subjpibdir, dvr2highres_mat)
         subjoutfile = os.path.join(subjpibdir, dvr2highres_fname)
         dvr2highres_coreg = pibprep.flirt_coreg(smoothedpib, 
@@ -81,6 +82,7 @@ if __name__ == '__main__':
                                         subjoutfile)
         dvr2highres_outmat = dvr2highres_coreg.out_matrix_file
         # Warp pib->std. Uses existing structural->std warp and pib->structural premat
+        print 'Warping image to standard space...'
         highres2std_warp = os.path.join(subjfeatdir,
                                 'reg',
                                 highres2std_fname)
