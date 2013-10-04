@@ -44,13 +44,14 @@ def get_resolution(img):
         return res
 
 
-def est_smoothing(featdir, trgimage):   
+def est_smoothing(featdir, trgimage, stdspaceres=None):   
     print 'Estimating smoothness...' 
     designfsf = os.path.join(featdir, 'design.fsf')
     func_smoothing = getsmooth(designfsf) # Get fwhm smoothing of func data
-    subjstdimg = os.path.join(featdir,'reg', 
-                                'standard.nii.gz') # Standard space img
-    stdspaceres = get_resolution(subjstdimg)
+    if not stdspaceres:
+        subjstdimg = os.path.join(featdir,'reg', 
+                                    'standard.nii.gz') # Standard space img
+        stdspaceres = get_resolution(subjstdimg)
     example_func = os.path.join(featdir, 'example_func')
     cmd  = ' '.join(['match_smoothing', 
                     example_func, 
