@@ -57,7 +57,7 @@ def est_smoothing(featdir, trgimage, stdspaceres=None):
                     example_func, 
                     func_smoothing, 
                     trgimage, 
-                    stdspaceres])
+                    str(stdspaceres)])
     cout = CommandLine(cmd).run()
     if not cout.runtime.returncode == 0:
         print cmd
