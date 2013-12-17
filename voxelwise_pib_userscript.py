@@ -75,7 +75,7 @@ if __name__ == '__main__':
         subjhighres = highres_pattern%{"subj":subj}
         subjhighres2std_warp = highres2std_pattern%{"subj":subj}
         subjdvr2std_mat = os.path.join(subjpibdir, dvr2std_mat)
-        stdpib = os.path.join(subjpibdir, dvr2std_fname)
+        subjstdpib = os.path.join(subjpibdir, dvr2std_fname)
         
         # Estimate and apply smoothing to PIB images
         smoothing = pibprep.est_smoothing(subjfeatdir, subjdvr, stdspaceres)
@@ -99,12 +99,15 @@ if __name__ == '__main__':
                                                 refbrain, 
                                                 highres2std_warp, 
                                                 dvr2highres_outmat, 
-                                                stdpib)
+                                                subjstdpib)
         else:
             dvr2std_outmat = pibprep.concat_xfm(dvr2highres_outmat,
                                         subjhighres2std_warp,
                                         subjdvr2std_mat)
-            warp_pib2std = 
+            warp_pib2std = pibprep.apply_xfm(smoothedpib, 
+                                                refbrain, 
+                                                subjstdpib, 
+                                                subjdvr2std_mat)
         
         # update dict with subj and file
         warpedpib.update({subj:warp_pib2std.out_file}) 
