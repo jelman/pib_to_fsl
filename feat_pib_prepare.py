@@ -114,14 +114,21 @@ def concat_xfm(infile, infile2, outmat):
         return None
     else:
         return cout.outputs
-        
->>> applyxfm = fsl.ApplyXfm()
->>> applyxfm.inputs.in_file = example_data('structural.nii')
->>> applyxfm.inputs.in_matrix_file = example_data('trans.mat')
->>> applyxfm.inputs.out_file = 'newfile.nii'
->>> applyxfm.inputs.reference = example_data('mni.nii')
->>> applyxfm.inputs.apply_xfm = True
->>> result = applyxfm.run() 
+
+def apply_xfm(infile, ref_file, outfile, xfm_file):   
+    axfm = fsl.axfm()
+    axfm.inputs.in_file = infile
+    axfm.inputs.in_matrix_file = xfm_file
+    axfm.inputs.out_file = outfile
+    axfm.inputs.reference = ref_file
+    axfm.inputs.apply_xfm = True
+    cout = axfm.run() 
+    if not cout.runtime.returncode == 0:
+        print axfm.cmdline
+        print cout.runtime.stderr, cout.runtime.stdout
+        return None
+    else:
+        return cout.outputs
         
 def applywarp(infile, ref, warp, premat, outfile):
     aw = fsl.ApplyWarp()
