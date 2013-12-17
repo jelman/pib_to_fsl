@@ -19,21 +19,22 @@ if __name__ == '__main__':
     ######################################################################
     ################# Specify path and file names ########################
     ### Specify path names
-    basedir = '/home/jagust/rsfmri_ica/data' # main project directory
-    pibdir = 'pib' # name of directory containing pib data
-    anatdir = 'anat' # name of directory containing FSL structural data
-    funcdir = 'func' # name of directory containing FSL functional data
-    featdir = '_4d_OldYoungICA.ica'
+    basedir = '/home/jagust/DST/FSL' # main project directory
+    pibdir = os.path.join(basedir,'pib','%(subj)s') # name of directory containing pib data
+    anatdir = os.path.join(basedir,'structural','%(subj)s') # name of directory containing FSL structural data
+    featdir = os.path.join(basedir,'functional/%(subj)s/run02/Detail.feat')
     
     ### Inputs ###
     # Specify filenames and filename patterns from pib processing
-    dvr_suffix = '_dvr.nii' # filename pattern of pib image
+    dvr_pattern = os.path.join(pibdir,'rawdvr.nii') # filename pattern of pib image
+    meandvr_pattern = os.path.join(pibdir,'mean20min.nii.gz') # filename pattern of mean 20 min pib image
     # Specify filenames of files used in FSL processing stream
-    highres_suffix = '_anat_brain.nii.gz' # structural image from FSL processing
-    highres2std_fname = 'highres2standard_warp.nii.gz'
+    highres_pattern = os.path.join(anatdir,'T1_brain.nii.gz') # structural image from FSL processing
+    highres2std_pattern = os.path.join(featdir,
+                                        'reg', 'highres2standard_warp.nii.gz')
     refbrain = os.path.join('/home/jagust/jelman/templates/MNI/data/standard',
-                            'MNI152_T1_3mm_brain.nii.gz') # Standard brain used
-                            
+                            'MNI152_T1_2mm_brain.nii.gz') # Standard brain used
+                    
     ### Outputs ###                            
     dvr2highres_mat = 'dvr2highres.mat' # name for pet-> highres coreg mat
     dvr2highres_fname = 'dvr2highres.nii.gz'
@@ -58,13 +59,11 @@ if __name__ == '__main__':
         print 'Beginning subject %s'%(subj)
         
         # Sets subject specific subdirectories and files
-        subjpibdir = os.path.join(basedir, subj, pibdir)
-        subjanatdir = os.path.join(basedir, subj, anatdir)
-        subjfuncdir = os.path.join(basedir, subj, funcdir)
-        subjfeatdir = os.path.join(basedir, subj, funcdir, 
-                                ''.join([subj,featdir]))
-        subjdvr = os.path.join(subjpibdir, 
-                                ''.join([subj, dvr_suffix]))
+        subjpibdir = pibdir%{"subj":subj}
+        subjfeatdir = featdir%{"subj":subj}
+        subjhighres = highres_pattern%{"subj":subj}
+        subjdvr = dvr_pattern%{"subj":subj}
+        subjmeandvr = meandvr_pattern%{"subj":subj}
         subjhighres = os.path.join(subjanatdir, 
                                     ''.join([subj, highres_suffix]))
         
