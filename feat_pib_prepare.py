@@ -116,7 +116,7 @@ def concat_xfm(infile, infile2, outmat):
         return cout.outputs
 
 def apply_xfm(infile, ref_file, outfile, xfm_file):   
-    axfm = fsl.axfm()
+    axfm = fsl.ApplyXfm()
     axfm.inputs.in_file = infile
     axfm.inputs.in_matrix_file = xfm_file
     axfm.inputs.out_file = outfile
