@@ -1,5 +1,5 @@
 import sys, os
-sys.path.insert(0, '/home/jagust/jelman/CODE/pib_to_fsl')
+sys.path.insert(0, '/home/jagust/jelman/CODE/voxelwise_pib')
 import feat_pib_prepare as pibprep
 from nipype.utils.filemanip import split_filename
 from nipype.utils.filemanip import save_json
@@ -34,10 +34,12 @@ if __name__ == '__main__':
                                         'reg', 'highres2standard_warp.nii.gz')
     refbrain = os.path.join('/home/jagust/jelman/templates/MNI/data/standard',
                             'MNI152_T1_2mm_brain.nii.gz') # Standard brain used
+    stdspaceres = None #Specify standard space smoothing resolution. Otherwise, set to None in order to
+                        #calculate from image.
                     
     ### Outputs ###                            
     dvr2highres_mat = 'dvr2highres.mat' # name for pet-> highres coreg mat
-    dvr2highres_fname = 'dvr2highres.nii.gz'
+    dvr2highres_fname = 'mean20min2highres.nii.gz'
     dvr2std_fname = 'dvr2std.nii.gz'    #dvr image in standard space
     pib4d_fname = os.path.join(
                         basedir,        #name of 4d voxelwise covariate file
@@ -64,29 +66,27 @@ if __name__ == '__main__':
         subjhighres = highres_pattern%{"subj":subj}
         subjdvr = dvr_pattern%{"subj":subj}
         subjmeandvr = meandvr_pattern%{"subj":subj}
-        subjhighres = os.path.join(subjanatdir, 
-                                    ''.join([subj, highres_suffix]))
+        subjhighres = highres_pattern%{"subj":subj}
+        highres2std_warp = highres2std_pattern%{"subj":subj}
         
         # Estimate and apply smoothing to PIB images
-        smoothing = pibprep.est_smoothing(subjfeatdir, subjdvr, 3)
+        smoothing = pibprep.est_smoothing(subjfeatdir, subjdvr, stdspaceres)
         smoothedpib = pibprep.apply_smooth(subjdvr, smoothing)
         
         # Coregister dvr->highres and save out matfile
         print 'Running coregistrations...'
         subjoutmat = os.path.join(subjpibdir, dvr2highres_mat)
         subjoutfile = os.path.join(subjpibdir, dvr2highres_fname)
-        dvr2highres_coreg = pibprep.flirt_coreg(smoothedpib, 
+        dvr2highres_coreg = pibprep.flirt_coreg(subjmeandvr, 
                                         subjhighres, 
                                         subjoutmat,
                                         subjoutfile)
         dvr2highres_outmat = dvr2highres_coreg.out_matrix_file
         # Warp pib->std. Uses existing structural->std warp and pib->structural premat
         print 'Warping image to standard space...'
-        highres2std_warp = os.path.join(subjfeatdir,
-                                'reg',
-                                highres2std_fname)
+
         stdpib = os.path.join(subjpibdir, dvr2std_fname)
-        warp_pib2std = pibprep.applywarp(subjdvr, 
+        warp_pib2std = pibprep.applywarp(smoothedpib, 
                                             refbrain, 
                                             highres2std_warp, 
                                             dvr2highres_outmat, 
