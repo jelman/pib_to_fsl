@@ -10,7 +10,7 @@ from nipype.utils.filemanip import save_json
 if __name__ == '__main__':
 
     # Get list of subjects from commandline call
-    if len(sys.argv) > 1:   #If specified, load file as list of subject id's
+    if len(sys.argv) > 1:
         sublist = sys.argv[1:]
     else:    
         print 'No subjects specified'
@@ -24,10 +24,10 @@ if __name__ == '__main__':
     anatdir = os.path.join(basedir,'structural','%(subj)s') # name of directory containing FSL structural data
     featdir = os.path.join(basedir,'functional/%(subj)s/run02/Detail.feat')
     
-    ### Inputs ###
+    ### Specift Inputs ###
     ## Specify filenames and filename patterns from pib processing
     dvr_pattern = os.path.join(pibdir,'rawdvr.nii') # filename pattern of pib image
-    meandvr_pattern = os.path.join(pibdir,'mean20min.nii.gz') # filename pattern of mean 20 min pib image
+    meandvr_pattern = os.path.join(pibdir,'mean20min_brain.nii.gz') # filename pattern of mean 20 min pib image
     ## Specify filenames of files used in FSL processing stream
     highres_pattern = os.path.join(anatdir,'T1_brain.nii.gz') # structural image from FSL processing
     refbrain = os.path.join('/home/jagust/jelman/templates/MNI/data/standard',
@@ -42,16 +42,14 @@ if __name__ == '__main__':
                                         'reg', 'highres2standard.mat')
 
                     
-    ### Outputs ###                            
+    ### Specify Outputs ###                            
     dvr2highres_mat = 'dvr2highres.mat' # name for pet-> highres coreg mat
     dvr2highres_fname = 'mean20min2highres.nii.gz'
     dvr2std_mat = 'dvr2std.mat' # name for pet > std coreg mat (not used for non-linear coreg)
     dvr2std_fname = 'dvr2std.nii.gz'    #dvr image in standard space
-    pib4d_fname = os.path.join(
-                        basedir,        #name of 4d voxelwise covariate file
+    pib4d_fname = os.path.join(basedir,'pib',        #name of 4d voxelwise covariate file
                         '4D_pib_dvr.nii.gz')
-    pib4d_demean_fname = os.path.join(
-                        basedir,        #name of demeaned 4d voxelwise covariate file
+    pib4d_demean_fname = os.path.join(basedir,'pib', #name of demeaned 4d voxelwise covariate file
                         '4D_pib_dvr_demeaned.nii.gz')
     ###########################################################################
     ###########################################################################
@@ -88,7 +86,8 @@ if __name__ == '__main__':
         dvr2highres_coreg = pibprep.flirt_coreg(subjmeandvr, 
                                         subjhighres, 
                                         subjoutmat,
-                                        subjoutfile)
+                                        subjoutfile,
+                                        cost='mutualinfo')
         dvr2highres_outmat = dvr2highres_coreg.out_matrix_file
         # Warp pib->std. Uses existing structural->std warp and pib->structural premat
         print 'Warping image to standard space...'
@@ -121,7 +120,7 @@ if __name__ == '__main__':
     
     # Concatenate into 4D file and demean for use as covariate
     pib4dfile = pibprep.concat4d(pib4d_fname, dvrlist)
-    pib4dfile_demeaned = pibprep.demean4d(pib4dfile, pib4d_demeaned_fname)
+    pib4dfile_demeaned = pibprep.demean4d(pib4dfile, pib4d_demean_fname)
     # Save out dict listing subject order and files in 4D file
     pth, fname_base, ext = split_filename(pib4d_fname)
     fname = ''.join([os.path.join(pth,fname_base), '_subjorder.txt'])
