@@ -94,12 +94,41 @@ def flirt_coreg(infile, ref, outmat, outfile, cost='corratio'):
     flt.inputs.dof = 6
     cout = flt.run() 
     if not cout.runtime.returncode == 0:
-        print invt.cmdline
+        print flt.cmdline
         print cout.runtime.stderr, cout.runtime.stdout
         return None
     else:
         return cout.outputs
 
+
+def concat_xfm(infile, infile2, outmat):
+    concat = fsl.ConvertXFM()
+    concat.inputs.in_file = infile
+    concat.inputs.in_file2 = infile2
+    concat.inputs.concat_xfm = True
+    concat.inputs.out_file = outmat
+    cout = concat.run() 
+    if not cout.runtime.returncode == 0:
+        print concat.cmdline
+        print cout.runtime.stderr, cout.runtime.stdout
+        return None
+    else:
+        return cout.outputs
+
+def apply_xfm(infile, ref_file, outfile, xfm_file):   
+    axfm = fsl.ApplyXfm()
+    axfm.inputs.in_file = infile
+    axfm.inputs.in_matrix_file = xfm_file
+    axfm.inputs.out_file = outfile
+    axfm.inputs.reference = ref_file
+    axfm.inputs.apply_xfm = True
+    cout = axfm.run() 
+    if not cout.runtime.returncode == 0:
+        print axfm.cmdline
+        print cout.runtime.stderr, cout.runtime.stdout
+        return None
+    else:
+        return cout.outputs
         
 def applywarp(infile, ref, warp, premat, outfile):
     aw = fsl.ApplyWarp()
@@ -110,7 +139,7 @@ def applywarp(infile, ref, warp, premat, outfile):
     aw.inputs.out_file = outfile
     cout = aw.run()   
     if not cout.runtime.returncode == 0:
-        print invt.cmdline
+        print aw.cmdline
         print cout.runtime.stderr, 
         return None
     else:
