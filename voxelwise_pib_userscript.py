@@ -1,5 +1,5 @@
 import sys, os
-sys.path.insert(0, '/home/jagust/jelman/CODE/pib_to_fsl')
+sys.path.insert(0, '/home/jagust/rsfmri_ica/code/voxelwise_pib')
 import feat_pib_prepare as pibprep
 from nipype.utils.filemanip import split_filename
 from nipype.utils.filemanip import save_json
