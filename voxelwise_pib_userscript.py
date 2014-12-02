@@ -27,7 +27,8 @@ if __name__ == '__main__':
     
     ### Inputs ###
     # Specify filenames and filename patterns from pib processing
-    dvr_suffix = '_dvr.nii' # filename pattern of pib image
+    dvr_suffix = '_dvr.nii' # filename pattern of pib dvr image
+    meandvr = '_mean20min.nii' #filename pattern of pib mean20min image
     # Specify filenames of files used in FSL processing stream
     highres_suffix = '_anat_brain.nii.gz' # structural image from FSL processing
     highres2std_fname = 'highres2standard_warp.nii.gz'
@@ -65,6 +66,8 @@ if __name__ == '__main__':
                                 ''.join([subj,featdir]))
         subjdvr = os.path.join(subjpibdir, 
                                 ''.join([subj, dvr_suffix]))
+        subjmeandvr = os.path.join(subjpibdir, 
+                                ''.join([subj, meandvr_suffix]))
         subjhighres = os.path.join(subjanatdir, 
                                     ''.join([subj, highres_suffix]))
         
@@ -76,7 +79,7 @@ if __name__ == '__main__':
         print 'Running coregistrations...'
         subjoutmat = os.path.join(subjpibdir, dvr2highres_mat)
         subjoutfile = os.path.join(subjpibdir, dvr2highres_fname)
-        dvr2highres_coreg = pibprep.flirt_coreg(smoothedpib, 
+        dvr2highres_coreg = pibprep.flirt_coreg(subjmeandvr, 
                                         subjhighres, 
                                         subjoutmat,
                                         subjoutfile)
